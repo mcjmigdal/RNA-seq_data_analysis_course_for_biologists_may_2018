@@ -1,0 +1,2 @@
+#!/bin/bash
+$VIRTUAL_ENV/.local/Salmon-latest_linux_x86_64/bin/salmon $@
