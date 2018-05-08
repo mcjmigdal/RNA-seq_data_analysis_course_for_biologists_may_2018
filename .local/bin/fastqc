@@ -1,2 +1,2 @@
 #!/bin/bash
-$VIRTUAL_ENV/.local/FastQC/fastqc
+$VIRTUAL_ENV/.local/FastQC/fastqc $@
