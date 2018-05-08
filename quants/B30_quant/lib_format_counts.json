@@ -1,0 +1,22 @@
+{
+    "read_files": "raw/B30.fastq.gz",
+    "expected_format": "U",
+    "compatible_fragment_ratio": 1.0,
+    "num_compatible_fragments": 10063617,
+    "num_assigned_fragments": 10063617,
+    "num_consistent_mappings": 22586643,
+    "num_inconsistent_mappings": 0,
+    "strand_mapping_bias": 0.469796773252227,
+    "MSF": 0,
+    "OSF": 0,
+    "ISF": 0,
+    "MSR": 0,
+    "OSR": 0,
+    "ISR": 0,
+    "SF": 10611132,
+    "SR": 11975511,
+    "MU": 0,
+    "OU": 0,
+    "IU": 0,
+    "U": 0
+}

@@ -1,0 +1,52 @@
+[2018-05-08 14:57:42.877] [jointLog] [info] parsing read library format
+[2018-05-08 14:57:42.878] [jointLog] [info] There is 1 library.
+[2018-05-08 14:57:43.015] [jointLog] [info] Loading Quasi index
+[2018-05-08 14:57:43.016] [jointLog] [info] Loading 32-bit quasi index
+[2018-05-08 14:57:58.628] [jointLog] [info] done
+[2018-05-08 14:57:58.628] [jointLog] [info] Index contained 57191 targets
+[2018-05-08 14:57:59.510] [jointLog] [warning] Fragment GC bias correction is currently *experimental* in single-end libraries.  Please use this option with caution.
+[2018-05-08 14:57:59.906] [jointLog] [info] Automatically detected most likely library type as U
+[2018-05-08 14:59:00.882] [jointLog] [info] Computed 53383 rich equivalence classes for further processing
+[2018-05-08 14:59:00.882] [jointLog] [info] Counted 6618267 total reads in the equivalence classes 
+[2018-05-08 14:59:00.891] [jointLog] [info] Mapping rate = 20.793%
+
+[2018-05-08 14:59:00.891] [jointLog] [info] finished quantifyLibrary()
+[2018-05-08 14:59:00.891] [jointLog] [info] Starting optimizer
+[2018-05-08 14:59:00.883] [fileLog] [info] 
+At end of round 0
+==================
+Observed 31829254 total fragments (31829254 in most recent round)
+
+[2018-05-08 14:59:00.946] [jointLog] [info] Marked 0 weighted equivalence classes as degenerate
+[2018-05-08 14:59:00.950] [jointLog] [info] iteration = 0 | max rel diff. = 68.4414
+[2018-05-08 14:59:00.986] [jointLog] [info] iteration 11, adjusting effective lengths to account for biases
+[2018-05-08 15:00:12.663] [jointLog] [info] Computed expected counts (for bias correction)
+[2018-05-08 15:00:12.663] [jointLog] [info] processed bias for 0.0% of the transcripts
+[2018-05-08 15:00:20.105] [jointLog] [info] processed bias for 10.0% of the transcripts
+[2018-05-08 15:00:27.408] [jointLog] [info] processed bias for 20.0% of the transcripts
+[2018-05-08 15:00:34.480] [jointLog] [info] processed bias for 30.0% of the transcripts
+[2018-05-08 15:00:41.761] [jointLog] [info] processed bias for 40.0% of the transcripts
+[2018-05-08 15:00:48.883] [jointLog] [info] processed bias for 50.0% of the transcripts
+[2018-05-08 15:00:56.066] [jointLog] [info] processed bias for 60.0% of the transcripts
+[2018-05-08 15:01:01.854] [jointLog] [info] processed bias for 100.0% of the transcripts
+[2018-05-08 15:01:02.155] [jointLog] [info] iteration = 100 | max rel diff. = 0.348507
+[2018-05-08 15:01:02.493] [jointLog] [info] iteration = 200 | max rel diff. = 0.112731
+[2018-05-08 15:01:02.831] [jointLog] [info] iteration = 300 | max rel diff. = 0.0360239
+[2018-05-08 15:01:03.175] [jointLog] [info] iteration = 400 | max rel diff. = 0.0277452
+[2018-05-08 15:01:03.521] [jointLog] [info] iteration = 500 | max rel diff. = 0.0343172
+[2018-05-08 15:01:03.868] [jointLog] [info] iteration = 600 | max rel diff. = 0.0253236
+[2018-05-08 15:01:04.216] [jointLog] [info] iteration = 700 | max rel diff. = 0.0350226
+[2018-05-08 15:01:04.566] [jointLog] [info] iteration = 800 | max rel diff. = 0.0193922
+[2018-05-08 15:01:04.916] [jointLog] [info] iteration = 900 | max rel diff. = 0.0225921
+[2018-05-08 15:01:05.271] [jointLog] [info] iteration = 1000 | max rel diff. = 0.0257571
+[2018-05-08 15:01:05.625] [jointLog] [info] iteration = 1100 | max rel diff. = 0.0173439
+[2018-05-08 15:01:05.982] [jointLog] [info] iteration = 1200 | max rel diff. = 0.0169256
+[2018-05-08 15:01:06.345] [jointLog] [info] iteration = 1300 | max rel diff. = 0.0148472
+[2018-05-08 15:01:06.649] [jointLog] [info] iteration = 1384 | max rel diff. = 0.00996269
+[2018-05-08 15:01:06.652] [jointLog] [info] Finished optimizer
+[2018-05-08 15:01:06.652] [jointLog] [info] writing output 
+
+[2018-05-08 15:01:06.763] [jointLog] [warning] NOTE: Read Lib [raw/A30.fastq.gz] :
+
+Detected a *potential* strand bias > 1% in an unstranded protocol check the file: quants/raw/A30_quant/lib_format_counts.json for details
+

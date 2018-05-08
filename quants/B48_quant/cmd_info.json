@@ -1,0 +1,10 @@
+{
+    "salmon_version": "0.9.1",
+    "gcBias": [],
+    "index": "ref/Danio_rerio",
+    "libType": "A",
+    "unmatedReads": "raw/B48.fastq.gz",
+    "threads": "6",
+    "output": "quants/raw/B48_quant",
+    "auxDir": "aux_info"
+}
