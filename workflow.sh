@@ -14,10 +14,12 @@ if [ ! -d raw ] || [ ${download} ]; then
   cd ..
 fi
 
+# TODO gtf will be needed as well
 if [ ! -d ref ] || [ ${download}  ]; then
   mkdir ref
   cd ref
-  wget ftp://ftp.ensembl.org/pub/release-92/fasta/danio_rerio/cdna/Danio_rerio.GRCz11.cdna.all.fa.gz
+  wget ftp://ftp.ensembl.org/pub/release-92/fasta/danio_rerio/cdna/Danio_rerio.GRCz11.cdna.all.fa.gz #TODO transcript names have to be modified for compatibility with gtf file
+  #TODO some transcripts in fasta lies in very strange chromosomes perhaps another cdna fasta version could be used here not `all`
   cd ..
 fi
 
@@ -31,7 +33,7 @@ fi
 
 # Build salmon index | took me about 2 mins at 516A
 if [ ! -d ref/Danio_rerio ]; then
-  salmon index -t ref/Danio_rerio.GRCz11.cdna.all.fa.gz -i Danio_rerio
+  salmon index -t ref/Danio_rerio.GRCz11.cdna.all.fa.gz -i ref/Danio_rerio #TODO test if ref/ works
 fi
 
 # Quantify reads
