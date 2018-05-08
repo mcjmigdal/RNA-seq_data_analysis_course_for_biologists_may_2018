@@ -26,6 +26,6 @@ If you have downloaded this repository you will have all results files ie.
 fastqc reports, reads quantifications (**so far**). However you will be missing
 the raw files which are fastqc's and cDNA fasta, and salmon index. You can 
 easly download the raw files by runing workflow.sh script with any argument, 
-like `bash workflow.sh 1`. This will tell the script to download the raw data 
+like :bash:`bash workflow.sh 1`. This will tell the script to download the raw data 
 even when the raw and ref directories already exists, which I've used as the 
 conditional for the workflow. Still you will be missing salmon index file.
