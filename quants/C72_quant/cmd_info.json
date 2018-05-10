@@ -1,10 +1,10 @@
 {
     "salmon_version": "0.9.1",
-    "gcBias": [],
     "index": "ref/Danio_rerio",
     "libType": "A",
     "unmatedReads": "raw/C72.fastq.gz",
-    "threads": "6",
+    "threads": "12",
     "output": "quants/raw/C72_quant",
+    "geneMap": "ref/Danio_rerio.GRCz11.92.gtf",
     "auxDir": "aux_info"
 }
