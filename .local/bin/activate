@@ -45,10 +45,10 @@ deactivate () {
 # unset irrelevant variables
 deactivate nondestructive
 
-if [ $(basename $(pwd)) ==  "rna_seq_workshop_2018" ]; then
+if [ $(basename $(pwd)) ==  "RNA-seq_data_analysis_course_for_biologists_may_2018" ]; then
   VIRTUAL_ENV=`pwd`
 else
-  echo "You have to be in rna_seq_workshop_2018 directory"
+  echo "You have to be in RNA-seq_data_analysis_course_for_biologists_may_2018 directory"
   return
 fi
 export VIRTUAL_ENV
@@ -72,7 +72,7 @@ if [ -z "${VIRTUAL_ENV_DISABLE_PROMPT-}" ] ; then
     if [ "x" != x ] ; then
         PS1="$PS1"
     else
-        PS1="(`basename \"$VIRTUAL_ENV\"`) $PS1"
+        PS1="(workshop) $PS1"
     fi
     export PS1
 fi
