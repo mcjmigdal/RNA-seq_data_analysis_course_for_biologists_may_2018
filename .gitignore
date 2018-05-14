@@ -8,3 +8,6 @@
 *.gtf
 *.swp
 *.gz
+_*
+conf.py
+Makefile
