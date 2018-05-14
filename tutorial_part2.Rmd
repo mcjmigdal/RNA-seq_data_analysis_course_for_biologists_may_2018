@@ -1,0 +1,291 @@
+---
+title: 'RNA Club meets NGSchool: Tutorial of RNA-seq Data Analysis for Biologists'
+author: "Michal Pawlak"
+date: "15/05/2017"
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(opts_chunk$set(tidy.opts=list(width.cutoff=60),message=FALSE, warning=FALSE, tidy=TRUE, strip.white=TRUE, echo = TRUE))
+```
+
+## Goal of this tutorial
+
+Our goal in this tutorial is to bring a summary of the RNA-seq experiment into R/Bioconductor for visualization and statistical testing. We want to visualize the relationships between the samples (within and across conditions), and then we want to perform statistical tests to find which genes are changing their expression. Finally, we want to perform a functional analysis of differentially expressed genes (DEG) between selected conditions.
+
+## Before starting
+
+RNA-seq data analysis can be relatively easy and straightforward once you get familiar with basics of R programming. Before starting you should be able to run R or R-Studio (can work both on Linux/Mac and Windows), set work directory, create projects, load files/objects and be able to manupulate vectors, data frames, lists etc. Useful courses/tutorials can be found on-line e.g. (https://www.datacamp.com/courses/free-introduction-to-r), (https://www.coursera.org/learn/r-programming). Most of them it free of charge on the very basic level and paid subscription is required for further parts of the course. 
+
+Very useful R packages to play around with the data are `dplyr` (https://cran.r-project.org/web/packages/dplyr/vignettes/dplyr.html), `tidyr` (https://tidyr.tidyverse.org/) or `reshape2` (http://seananderson.ca/2013/10/19/reshape/). They allow to easly manipulate data frames, filter them, subset and change the format.
+
+We will analyse data obtained from RNA-seq experiment performed from developing zebrafish hearts isolated at 30, 48 and 72 hpf published by Burkhard and Bakkers in 2018, in eLife (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5815850/). 
+
+## Install R studio
+
+**Check R version**
+Make sure you have installed R version >= 3.4.0. by typing in your terminal `R` and once you check `q()` to quit R. If your version is not updated run `sudo apt install r-base`. 
+
+**Install R studio**
+Check Linux version by typing in terminal `uname -mrs`. Follow the [instructions](https://www.rstudio.com/products/rstudio/download-server/).
+
+
+## Checking installed packages
+
+```{r pkgs}
+source("https://bioconductor.org/biocLite.R")
+biocLite()
+library(BiocInstaller)
+
+check.packages.bioc <- function(pkg){
+    new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+    if (length(new.pkg))
+        source("https://bioconductor.org/biocLite.R")
+        biocLite(new.pkg)
+    sapply(pkg, require, character.only = TRUE)
+}
+
+
+check.packages.cran <- function(pkg){
+    new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+    if (length(new.pkg))
+        install.packages(new.pkg, dependencies = TRUE)
+    sapply(pkg, require, character.only = TRUE)
+}
+
+packages_bioc <- c("BiocInstaller", "BiocParallel", "SummarizedExperiment", "GenomicAlignments", "BiocGenerics", "DESeq2", "Rsamtools", "GO.db", "biomaRt", "GenomicFeatures", "DO.db","GenomicRanges", "clusterProfiler")
+packages_cran <- c("reshape2","plyr","tidyr","tibble", "dplyr", "data.table", "RColorBrewer", "ggplot2")
+
+check.packages.bioc(packages_bioc)
+check.packages.cran(packages_cran)
+```
+
+## Generating gene count matrices
+
+Count-based statistical methods such as **DESeq2** (http://bioconductor.org/packages/DESeq2) (Love, Huber, and Anders 2014), **edgeR** (http://bioconductor.org/packages/edgeR) (M. D. Robinson, McCarthy, and Smyth 2009), **limma** (http://bioconductor.org/packages/limma) with the **voom** method (Law et al. 2014), **DSS** (http://bioconductor.org/packages/DSS) (H. Wu, Wang, and Wu 2013), **EBSeq** (http://bioconductor.org/packages/EBSeq) (Leng et al. 2013), **BaySeq** (http://bioconductor.org/packages/BaySeq) (Hardcastle and Kelly 2010) and **DEXSeq** (http://bioconductor.org/packages/DEXSeq) (Anders, Reyes, and Huber 2012) expect input data as obtained, e.g., from RNA-seq or another high-throughput sequencing experiment in the form of a matrix of integer values, or “counts”. 
+
+The value in the i-th row and the j-th column of the matrix tells how many reads (or fragments, for paired-end RNA-seq) have been assigned to feature i in sample j. For RNA-seq, a feature is typically a gene, a transcript or an exon. Analogously, for other types of assays, the rows of the matrix might correspond e.g., to binding regions (with ChIP-Seq), species of bacteria (with metagenomic datasets), or peptide sequences (with quantitative mass spectrometry).
+
+The fact that the values in the matrix are counts of sequencing reads (in the case of single-end sequencing) or fragments (for paired-end sequencing) is important for the count-based statistical models, e.g. DESeq2 or edgeR , as only the counts allow assessing the measurement precision correctly. 
+
+<div class="red2">
+**It is important to NEVER provide counts that have been normalized for sequencing depth/library size to these packages, as the statistical model is most powerful when applied to counts, and is designed to account for library size differences internally.**
+</div>
+
+In the sections below, we will show to to generate gene-level count matrices in R from the **Salmon** (http://salmon.readthedocs.io/en/latest/index.html) output of quasi-mappings of reads to transcript/gene positions that are computed without performing a base-to-base alignment of the read to the transcript/gene. Quasi-mapping is typically much faster to compute than traditional (or full) alignments, and can sometimes provide superior accuracy by being more robust to errors in the read or genomic variation from the reference sequence (https://academic.oup.com/bioinformatics/article/32/12/i192/2288985). 
+
+## Transcript abundance files and tximport input
+
+A newer and recommended pipeline is to use fast transcript abundance quantifiers upstream of DESeq2, and then to create gene-level count matrices for use with DESeq2 by importing the quantification data using the `tximport` package. 
+
+We will create a data frame containing directories to `quant.sf` files and sample infromation. A separate `quant.sf` is generated by `Salmon` for each sample and contains 5 columns: Name, Length, EffectiveLength, TPM, NumReads. We are particularly interested in `Name` column containing transcript IDs and `NumReads` containing unnormalized transcirpt counts. 
+
+Git repository containing `quant.sf` files can be downloaded here:
+```{bash git clone, eval=FALSE, echo=FALSE, message=FALSE, warning=FALSE, collapse = TRUE, results="hide"}
+#git clone https://github.com/mcjmigdal/RNA-seq_data_analysis_course_for_biologists_may_2018.git
+```
+
+```{r importing results}
+library("tximport")
+
+#creating a list of quant.sf file directories
+# modify depending on your quant.sf directories
+files  <- list.files("./RNA-seq_data_analysis_course_for_biologists_may_2018/quants",
+                     pattern = "genes.sf", full.names=TRUE, recursive = TRUE) 
+#inspecting files
+files
+
+#creating a data frame containing samples information
+sampleTable <- data.frame(replicate =  c("1", "1", "1", "2", "2", "2", "3", "3", "3"),
+                          time = c("30hpf", "48hpf", "72hpf", "30hpf", "48hpf", "72hpf",
+                                   "30hpf", "48hpf", "72hpf"))
+rownames(sampleTable) <- paste(sampleTable$time, sampleTable$replicate, sep='_')
+sampleTable$time_replicate = paste(sampleTable$time, sampleTable$replicate, sep='_')
+
+#assigning column names for each sample
+names(files) <- paste0(sampleTable$time_replicate)
+
+#inspecting sampleTable
+sampleTable
+
+#this function will output gene-level matrices. We can avoid gene-level summarization by setting txOut=TRUE
+txi <- tximport(files, type = "salmon", txOut = TRUE)
+```
+
+## Creating DESeq2 object
+
+Finally, we can construct a `DESeqDataSet` from the txi object and sample information in samples. The object class used by the `DESeq2` package to store the read counts and the intermediate estimated quantities during statistical analysis is the `DESeqDataSet`, which will usually be represented in the code here as an object `dds`.
+
+```{r running DESeq2}
+library("DESeq2")
+dds <- DESeqDataSetFromTximport(txi, colData = sampleTable, design = ~ time)
+#by removing rows in which there are very few reads, we reduce the memory size of the dds data object, and we increase the speed of the transformation and testing functions within DESeq2
+keep <- rowSums(counts(dds)) >= 10
+dds <- dds[keep,]
+```
+
+
+## Performing counts normalization
+
+'Regularized log' transformation the count data to the log2 scale in a way which minimizes differences between samples for rows with small counts, and which normalizes with respect to **library size**. The rlog transformation produces a similar variance stabilizing effect as `varianceStabilizingTransformation`, though rlog is more robust in the case *when the size factors vary widely*. The transformation is useful when checking for outliers or as input for machine learning techniques such as clustering or linear discriminant analysis. rlog takes as input a `DESeqDataSet` and returns a `RangedSummarizedExperiment` object. 
+
+```{r rlog transformation}
+# blind=FALSE should be used for transforming data for downstream analysis, where the full use of the design information should be made.
+dds <- estimateSizeFactors(dds)
+dds <- estimateDispersions(dds)
+rld <- rlog(dds, blind=FALSE)
+head(assay(rld), 3)
+saveRDS(rld, file = "rld.cardio.RDS")
+rld=readRDS("rld.cardio.RDS")
+```
+
+#### Validating the effect of normalizationa and quality assessment (QA)
+
+```{r effects of transformation,fig.width=4, fig.height=3,fig.show='hold',fig.align='center'}
+#load this package to visualize 
+library("vsn")
+#before
+meanSdPlot(log2(counts(dds,normalized=TRUE)))
+#and after transformation
+meanSdPlot(assay(rld))
+```
+
+**Heatmap of the sample-to-sample distances and pairwise Pearson correlation**
+
+```{r sample distance heatmap,fig.width=4, fig.height=3,fig.show='hold',fig.align='center'}
+library("pheatmap")
+library("RColorBrewer")
+sampleDists <- dist( t( assay(rld) ) )
+sampleDistMatrix <- as.matrix( sampleDists )
+colors <- colorRampPalette( rev(brewer.pal(9, "Blues")) )(255)
+pheatmap(sampleDistMatrix, clustering_distance_rows=sampleDists, clustering_distance_cols=sampleDists, col=colors, show_colnames = FALSE)
+rld_cor <- cor(assay(rld), method = "pearson")
+pheatmap(rld_cor)
+
+```
+
+**PCA analysis**
+
+Related to the distance matrix is the PCA plot, which shows the samples in the 2D plane spanned by their first two principal components. This type of plot is useful for visualizing the overall effect of experimental covariates and batch effects.
+
+```{r PCA,fig.width=4, fig.height=3,fig.show='hold',fig.align='center'}
+plotPCA(rld, intgroup=c("time_replicate"))
+```
+
+**Heatmap of genes with the highest expression**
+
+We can have a look at selected genes across all conditions to validate how reproducible are the replicates
+```{r heatmap of rld,fig.width=4, fig.height=3,fig.show='hold',fig.align='center'}
+#this packages will draw the heatmap
+library("pheatmap")
+#select 20 genes with the highest mean across all samples
+select <- order(rowMeans(assay(rld)),
+                decreasing=TRUE)[1:20]
+#draw the heatmap
+assay(rld)[,c(1,4,7,2,5,8,3,6,9)][select,]
+pheatmap(assay(rld)[,c(1,4,7,2,5,8,3,6,9)][select,], cluster_rows=FALSE, show_rownames=TRUE,
+         cluster_cols=FALSE)
+```
+
+##Differential expression analysis
+
+The standard differential expression analysis steps are wrapped into a single function, `DESeq`. Results tables are generated using the function `results`, which extracts a results table with **log2 fold changes**, **p values** and **adjusted p values**. With no additional arguments to results, the log2 fold change and Wald test p value will be for the last variable in the design formula, and if this is a factor, the comparison will be the last level of this variable over the reference level (see previous note on factor levels). However, the order of the variables of the design do not matter so long as the user specifies the comparison to build a results table for, using the name or contrast arguments of results.
+
+We can also visualize selected contrasts by MA plot which shows log2 FC vs. mean normalized counts. Dots in red represent values with padj < 0.05.
+
+**Performing differential expression analysis**
+
+```{r differential expression analysis, fig.width=4, fig.height=3,fig.show='hold',fig.align='center'}
+#DEG
+dds <- DESeq(dds, quiet=F)
+saveRDS(dds, file="dds.cardio.RDS")
+Res <- results(dds)
+Res
+
+#contrast for 30 vs 48 hpf
+Res_30_48 = results(dds, contrast = c('time', '48hpf', '30hpf'), independentFiltering=T)
+#summary of 30 vs 48 hpf comparison
+summary(Res_30_48)
+#how many DEG with padj<0.05
+sum(Res_30_48$padj < 0.05, na.rm=TRUE)
+plotMA(Res_30_48, ylim=c(-10,10), alpha = 0.05, main="DEG 30 vs 48 hpf")
+
+#same for 48 vs 72 hpf
+Res_48_72 = results(dds, contrast = c('time', '72hpf', '48hpf'), independentFiltering=T)
+Res_48_72
+sum(Res_48_72$padj < 0.05, na.rm=TRUE)
+plotMA(Res_48_72, ylim=c(-10,10), alpha = 0.05, main="DEG 48 vs 72 hpf")
+
+```
+
+**Saving and exporting DEG table**
+
+Often creating a table with different conditions and DEG can be useful to perform further analysis and visualisations. We can also save a data frame as csv/tsv file or excel (xlsx) file. A number of packages can simply our work especially in terms of data table manipulation and filtering (`dplyr`, `tibble`) and exporting data (`xlsx`). We can also convert ENSEMBL gene IDs to any other annotations available in biomaRt database. For that purpose we will use `biomaRt` package.
+
+```{r saving DEG }
+library("dplyr")
+library("tibble")
+library("biomaRt")
+library("xlsx")
+
+#create data frame with log2FC, pvalue and padj for DEG 30 vs 48 hpf
+DEG_30_48 = as.data.frame(Res_30_48) %>% tibble::rownames_to_column('ENSEMBL') %>% dplyr::select(ENSEMBL, log2FoldChange, pvalue, padj) 
+#create data frame with log2FC, pvalue and padj for DEG 48 vs 72 hpf
+DEG_48_72 = as.data.frame(Res_48_72) %>% tibble::rownames_to_column('ENSEMBL') %>% dplyr::select(ENSEMBL, log2FoldChange, pvalue, padj)
+
+#combine both data frames in one
+DEG = dplyr::inner_join(DEG_30_48, DEG_48_72, by="ENSEMBL" )
+names(DEG) = c("Gene stable ID", "log2FC_30vs48", "pval_30vs48", "padj_30vs48", "log2FC_48vs72", "pval_48vs72", "padj_48vs72")
+DEG_cutoff = dplyr::filter(DEG, padj_30vs48 <= 0.05 | padj_48vs72 <= 0.05)
+
+#select a dataset and save as mart object
+mart <- biomaRt::useDataset("drerio_gene_ensembl", useMart("ensembl"))
+#check what are available attributes stored in mart object
+#biomaRt::listAttributes(mart=mart)
+#getting external gene name and entrez gene name
+biomaRt_list <- getBM( filters = "ensembl_gene_id", attributes = c("ensembl_gene_id", "external_gene_name", "entrezgene"), values=DEG_cutoff$`Gene stable ID`, mart= mart, bmHeader = TRUE, uniqueRows = TRUE)
+#merging novel gene names with DEG table
+DEG_annot = dplyr::inner_join(biomaRt_list , DEG_cutoff, by="Gene stable ID" )
+#saving data as csv
+write.csv(DEG_annot, file = "DEG_cardio.csv")
+#saving data as xlsx
+write.xlsx(DEG_annot, row.names = F, showNA = T, file = "DEG_cardio.xlsx")
+```
+
+**Functional Analyis: GO and KEGG analysis**
+
+We can perform gene ontology (GO) analysis or KEGG pathway analysis by using a number of available R packages. We can also export data stored e.g. as csv and perform on-line available tools such as DAVID or Panther. In this example we will create a list of differentially expressed genes both down- and up-regulated between different conditions. `clusterProfiler` package offers an useful tool to perform GO term enrichment analysis, KEGG pathway analysis and more.
+
+```{r GO, fig.width=12, fig.height=6,fig.show='hold',fig.align='center'}
+library("clusterProfiler")
+library("org.Dr.eg.db")
+
+up3048 = dplyr::filter(DEG_annot, log2FC_30vs48 < -2)
+down3048 = dplyr::filter(DEG_annot, log2FC_30vs48 > 2)
+
+up4872 = dplyr::filter(DEG_annot, log2FC_48vs72 < -2)
+down4872 = dplyr::filter(DEG_annot, log2FC_48vs72 > 2)
+
+
+FA_list = list("30vs48hpf down" = up3048$`NCBI gene ID`,
+               "30vs48hpf up" = down3048$`NCBI gene ID`,
+               "48vs72hpf down" = up4872$`NCBI gene ID`,
+               "48vs72hpf up" = down4872$`NCBI gene ID`)
+
+FA_list = lapply(FA_list, na.exclude)
+
+enrichGO <- compareCluster(geneCluster = FA_list, fun = "enrichGO", OrgDb = org.Dr.eg.db, ont="BP", pvalueCutoff=0.05, pAdjustMethod = "BH")
+enrichKEGG <- compareCluster(geneCluster = FA_list, fun = "enrichKEGG", organism = "dre", keyType = "kegg", pvalueCutoff=0.05, universe, pAdjustMethod = "BH")
+
+dotplot(enrichGO, showCategory = 5, by = "geneRatio", title="GO enrichment")
+dotplot(enrichKEGG , showCategory = 5, by = "geneRatio", title="KEGG pathway enrichment")
+```
+
+
+
+
+
