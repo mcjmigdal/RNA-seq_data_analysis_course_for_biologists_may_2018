@@ -33,12 +33,12 @@ fi
 
 # Build salmon index | took me about 2 mins at 516A
 if [ ! -d ref/Danio_rerio ]; then
-  salmon index -t ref/Danio_rerio.GRCz11.cdna.all.fa.gz -i ref/Danio_rerio #TODO test if ref/ works
+  salmon index -t ref/Danio_rerio.cdna.fa -i ref/Danio_rerio #TODO test if ref/ works
 fi
 
 # Quantify reads
 if [ ! -d quants ]; then
   for fq in raw/*.gz; do
-    salmon quant -i ref/Danio_rerio -l A -r ${fq} -p 6 -o quants/${fq%.fastq.gz}_quant
+    salmon quant -i ref/Danio_rerio -l A -r ${fq} -p 12 -o quants/${fq%.fastq.gz}_quant
   done
 fi

@@ -1,53 +1,42 @@
-[2018-05-08 15:21:16.297] [jointLog] [info] parsing read library format
-[2018-05-08 15:21:16.297] [jointLog] [info] There is 1 library.
-[2018-05-08 15:21:16.389] [jointLog] [info] Loading Quasi index
-[2018-05-08 15:21:16.389] [jointLog] [info] Loading 32-bit quasi index
-[2018-05-08 15:21:21.421] [jointLog] [info] done
-[2018-05-08 15:21:21.421] [jointLog] [info] Index contained 57191 targets
-[2018-05-08 15:21:22.300] [jointLog] [warning] Fragment GC bias correction is currently *experimental* in single-end libraries.  Please use this option with caution.
-[2018-05-08 15:21:22.562] [jointLog] [info] Automatically detected most likely library type as U
-[2018-05-08 15:22:29.778] [jointLog] [info] Computed 110777 rich equivalence classes for further processing
-[2018-05-08 15:22:29.778] [jointLog] [info] Counted 12730629 total reads in the equivalence classes 
-[2018-05-08 15:22:29.806] [jointLog] [info] Mapping rate = 38.1783%
+[2018-05-09 14:59:53.028] [jointLog] [info] parsing read library format
+[2018-05-09 14:59:53.028] [jointLog] [info] There is 1 library.
+[2018-05-09 14:59:53.120] [jointLog] [info] Loading Quasi index
+[2018-05-09 14:59:53.120] [jointLog] [info] Loading 32-bit quasi index
+[2018-05-09 14:59:58.182] [jointLog] [info] done
+[2018-05-09 14:59:58.182] [jointLog] [info] Index contained 57918 targets
+[2018-05-09 14:59:58.528] [jointLog] [info] Automatically detected most likely library type as U
+[2018-05-09 15:01:06.893] [jointLog] [info] Computed 109459 rich equivalence classes for further processing
+[2018-05-09 15:01:06.893] [jointLog] [info] Counted 21941291 total reads in the equivalence classes 
+[2018-05-09 15:01:06.932] [jointLog] [info] Mapping rate = 65.8004%
 
-[2018-05-08 15:22:29.806] [jointLog] [info] finished quantifyLibrary()
-[2018-05-08 15:22:29.806] [jointLog] [info] Starting optimizer
-[2018-05-08 15:22:29.872] [jointLog] [info] Marked 0 weighted equivalence classes as degenerate
-[2018-05-08 15:22:29.880] [jointLog] [info] iteration = 0 | max rel diff. = 208.943
-[2018-05-08 15:22:29.779] [fileLog] [info] 
+[2018-05-09 15:01:06.932] [jointLog] [info] finished quantifyLibrary()
+[2018-05-09 15:01:06.933] [jointLog] [info] Starting optimizer
+[2018-05-09 15:01:06.993] [jointLog] [info] Marked 0 weighted equivalence classes as degenerate
+[2018-05-09 15:01:06.999] [jointLog] [info] iteration = 0 | max rel diff. = 198.688
+[2018-05-09 15:01:06.894] [fileLog] [info] 
 At end of round 0
 ==================
 Observed 33345223 total fragments (33345223 in most recent round)
 
-[2018-05-08 15:22:29.953] [jointLog] [info] iteration 11, adjusting effective lengths to account for biases
-[2018-05-08 15:23:54.920] [jointLog] [info] Computed expected counts (for bias correction)
-[2018-05-08 15:23:54.920] [jointLog] [info] processed bias for 0.0% of the transcripts
-[2018-05-08 15:24:01.492] [jointLog] [info] processed bias for 10.0% of the transcripts
-[2018-05-08 15:24:07.930] [jointLog] [info] processed bias for 20.0% of the transcripts
-[2018-05-08 15:24:14.202] [jointLog] [info] processed bias for 30.0% of the transcripts
-[2018-05-08 15:24:20.317] [jointLog] [info] processed bias for 40.0% of the transcripts
-[2018-05-08 15:24:26.620] [jointLog] [info] processed bias for 50.0% of the transcripts
-[2018-05-08 15:24:32.688] [jointLog] [info] processed bias for 60.0% of the transcripts
-[2018-05-08 15:24:38.981] [jointLog] [info] processed bias for 70.0% of the transcripts
-[2018-05-08 15:24:45.506] [jointLog] [info] processed bias for 80.0% of the transcripts
-[2018-05-08 15:24:51.905] [jointLog] [info] processed bias for 90.0% of the transcripts
-[2018-05-08 15:24:52.840] [jointLog] [info] processed bias for 100.0% of the transcripts
-[2018-05-08 15:24:53.441] [jointLog] [info] iteration = 100 | max rel diff. = 0.192228
-[2018-05-08 15:24:54.105] [jointLog] [info] iteration = 200 | max rel diff. = 0.0848156
-[2018-05-08 15:24:54.773] [jointLog] [info] iteration = 300 | max rel diff. = 0.0365322
-[2018-05-08 15:24:55.440] [jointLog] [info] iteration = 400 | max rel diff. = 0.0264612
-[2018-05-08 15:24:56.093] [jointLog] [info] iteration = 500 | max rel diff. = 0.0399025
-[2018-05-08 15:24:56.768] [jointLog] [info] iteration = 600 | max rel diff. = 0.0264687
-[2018-05-08 15:24:57.455] [jointLog] [info] iteration = 700 | max rel diff. = 0.0206765
-[2018-05-08 15:24:58.120] [jointLog] [info] iteration = 800 | max rel diff. = 0.0228856
-[2018-05-08 15:24:58.784] [jointLog] [info] iteration = 900 | max rel diff. = 0.0273652
-[2018-05-08 15:24:59.448] [jointLog] [info] iteration = 1000 | max rel diff. = 0.0100572
-[2018-05-08 15:25:00.115] [jointLog] [info] iteration = 1100 | max rel diff. = 0.0100574
-[2018-05-08 15:25:00.169] [jointLog] [info] iteration = 1109 | max rel diff. = 0.00970659
-[2018-05-08 15:25:00.172] [jointLog] [info] Finished optimizer
-[2018-05-08 15:25:00.172] [jointLog] [info] writing output 
+[2018-05-09 15:01:07.531] [jointLog] [info] iteration = 100 | max rel diff. = 0.104298
+[2018-05-09 15:01:08.056] [jointLog] [info] iteration = 200 | max rel diff. = 0.0567773
+[2018-05-09 15:01:08.580] [jointLog] [info] iteration = 300 | max rel diff. = 0.0369539
+[2018-05-09 15:01:09.107] [jointLog] [info] iteration = 400 | max rel diff. = 0.0275375
+[2018-05-09 15:01:09.621] [jointLog] [info] iteration = 500 | max rel diff. = 0.0219196
+[2018-05-09 15:01:10.138] [jointLog] [info] iteration = 600 | max rel diff. = 0.0187004
+[2018-05-09 15:01:10.661] [jointLog] [info] iteration = 700 | max rel diff. = 0.0160434
+[2018-05-09 15:01:11.184] [jointLog] [info] iteration = 800 | max rel diff. = 0.0136739
+[2018-05-09 15:01:11.701] [jointLog] [info] iteration = 900 | max rel diff. = 0.0123076
+[2018-05-09 15:01:12.220] [jointLog] [info] iteration = 1000 | max rel diff. = 0.0102723
+[2018-05-09 15:01:12.230] [jointLog] [info] iteration = 1003 | max rel diff. = 0.00992755
+[2018-05-09 15:01:12.235] [jointLog] [info] Finished optimizer
+[2018-05-09 15:01:12.235] [jointLog] [info] writing output 
 
-[2018-05-08 15:25:00.289] [jointLog] [warning] NOTE: Read Lib [raw/C48.fastq.gz] :
+[2018-05-09 15:01:12.353] [jointLog] [warning] NOTE: Read Lib [raw/C48.fastq.gz] :
 
 Detected a *potential* strand bias > 1% in an unstranded protocol check the file: quants/raw/C48_quant/lib_format_counts.json for details
 
+[2018-05-09 15:01:12.354] [jointLog] [info] Computing gene-level abundance estimates
+[2018-05-09 15:01:29.519] [jointLog] [info] There were 58867 transcripts mapping to 31901 genes
+[2018-05-09 15:01:29.669] [jointLog] [info] Aggregating expressions to gene level
+[2018-05-09 15:01:29.763] [jointLog] [info] done
