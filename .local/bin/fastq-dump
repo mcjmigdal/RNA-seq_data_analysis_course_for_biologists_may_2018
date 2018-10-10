@@ -1,2 +1,0 @@
-#!/bin/bash
-$VIRTUAL_ENV/.local/sratoolkit.2.9.0-ubuntu64/bin/fastq-dump $@
