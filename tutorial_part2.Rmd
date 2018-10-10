@@ -1,7 +1,7 @@
 ---
-title: 'RNA Club meets NGSchool: Tutorial of RNA-seq Data Analysis for Biologists'
+title: 'Analysis, visualization and interpretation of RNA-seq data'
 author: "Michal Pawlak"
-date: "15/05/2017"
+date: "12/10/2018"
 output:
   html_document: default
   pdf_document: default
@@ -34,36 +34,6 @@ Make sure you have installed R version >= 3.4.0. by typing in your terminal `R` 
 Check Linux version by typing in terminal `uname -mrs`. Follow the [instructions](https://www.rstudio.com/products/rstudio/download-server/).
 
 
-## Checking installed packages
-
-```{r pkgs}
-source("https://bioconductor.org/biocLite.R")
-biocLite()
-library(BiocInstaller)
-
-check.packages.bioc <- function(pkg){
-    new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
-    if (length(new.pkg))
-        source("https://bioconductor.org/biocLite.R")
-        biocLite(new.pkg)
-    sapply(pkg, require, character.only = TRUE)
-}
-
-
-check.packages.cran <- function(pkg){
-    new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
-    if (length(new.pkg))
-        install.packages(new.pkg, dependencies = TRUE)
-    sapply(pkg, require, character.only = TRUE)
-}
-
-packages_bioc <- c("BiocInstaller", "BiocParallel", "SummarizedExperiment", "GenomicAlignments", "BiocGenerics", "DESeq2", "Rsamtools", "GO.db", "biomaRt", "GenomicFeatures", "DO.db","GenomicRanges", "clusterProfiler")
-packages_cran <- c("reshape2","plyr","tidyr","tibble", "dplyr", "data.table", "RColorBrewer", "ggplot2")
-
-check.packages.bioc(packages_bioc)
-check.packages.cran(packages_cran)
-```
-
 ## Generating gene count matrices
 
 Count-based statistical methods such as **DESeq2** (http://bioconductor.org/packages/DESeq2) (Love, Huber, and Anders 2014), **edgeR** (http://bioconductor.org/packages/edgeR) (M. D. Robinson, McCarthy, and Smyth 2009), **limma** (http://bioconductor.org/packages/limma) with the **voom** method (Law et al. 2014), **DSS** (http://bioconductor.org/packages/DSS) (H. Wu, Wang, and Wu 2013), **EBSeq** (http://bioconductor.org/packages/EBSeq) (Leng et al. 2013), **BaySeq** (http://bioconductor.org/packages/BaySeq) (Hardcastle and Kelly 2010) and **DEXSeq** (http://bioconductor.org/packages/DEXSeq) (Anders, Reyes, and Huber 2012) expect input data as obtained, e.g., from RNA-seq or another high-throughput sequencing experiment in the form of a matrix of integer values, or “counts”. 
@@ -94,7 +64,7 @@ library("tximport")
 
 #creating a list of quant.sf file directories
 # modify depending on your quant.sf directories
-files  <- list.files("./RNA-seq_data_analysis_course_for_biologists_may_2018/quants",
+files  <- list.files("./quants/",
                      pattern = "genes.sf", full.names=TRUE, recursive = TRUE) 
 #inspecting files
 files
@@ -176,7 +146,7 @@ Related to the distance matrix is the PCA plot, which shows the samples in the 2
 plotPCA(rld, intgroup=c("time_replicate"))
 ```
 
-**Heatmap of genes with the highest expression**
+**Heatmaps, clustering, single-gene visualization**
 
 We can have a look at selected genes across all conditions to validate how reproducible are the replicates
 ```{r heatmap of rld,fig.width=4, fig.height=3,fig.show='hold',fig.align='center'}
@@ -186,9 +156,83 @@ library("pheatmap")
 select <- order(rowMeans(assay(rld)),
                 decreasing=TRUE)[1:20]
 #draw the heatmap
-assay(rld)[,c(1,4,7,2,5,8,3,6,9)][select,]
-pheatmap(assay(rld)[,c(1,4,7,2,5,8,3,6,9)][select,], cluster_rows=FALSE, show_rownames=TRUE,
+rld_table <- as.data.frame(assay(rld)[,c(1,4,7,2,5,8,3,6,9)])
+rld_table[select,]
+pheatmap(rld_table[select,], cluster_rows=FALSE, show_rownames=TRUE,
          cluster_cols=FALSE)
+```
+
+We can do the same visualization but replace ENSEMBL annotation with other annotation
+```{r heatmap of rld modified,fig.width=4, fig.height=3,fig.show='hold',fig.align='center'}
+#use biomaRt to convert ensmbl ids into e.g. gene name or NCBI gene ids
+#often biomaRt packages can be corrupted so the way around is to install developmental version
+BiocInstaller::biocLite('grimbough/biomaRt')
+library(biomaRt)
+#select a dataset and save as mart object
+ensembl=useMart("ensembl")
+mart <- biomaRt::useDataset("drerio_gene_ensembl", mart=ensembl)
+
+#create a column from rownames
+rld_table$ensembl <- rownames(rld_table)
+
+#create a datafame with alternative annotations
+biomaRt_list_rld <- getBM( filters = "ensembl_gene_id", attributes = c("ensembl_gene_id", "external_gene_name", "entrezgene"), values=rld_table$ensembl, mart= mart, bmHeader = TRUE, uniqueRows = TRUE)
+
+#same heatmap as above but with gene name ids
+rld_table_alt = dplyr::inner_join(biomaRt_list_rld , rld_table, by=c("Gene stable ID"="ensembl"))
+select <- order(rowMeans(rld_table_alt[,c(4:12)]),
+                decreasing=TRUE)[1:20]
+pheatmap(rld_table_alt[select,c(4:12)], cluster_rows=FALSE, cluster_cols=FALSE, labels_row=rld_table_alt[select,2])
+```
+
+Another way to handle data is to perform a clustering i.e. k-mean or hierarchical. It allows to identify a group of genes that change in similar way in given conditions. 
+```{r clustering of rld,fig.width=4, fig.height=3,fig.show='hold',fig.align='center'}
+#hierarchical clustering of entire dataset with heatmap visualization
+clustering=pheatmap(rld_table_alt[,c(4:12)], cluster_rows=TRUE, cluster_cols=FALSE, show_rownames = FALSE, fontsize=8, cutree_rows=6)
+```
+
+We can plot genes from individual clusters to have a look at the pattern of expression for all of them or just single genes across conditions
+```{r cluster plot,fig.width=4, fig.height=3,fig.show='hold',fig.align='center'}
+library("reshape2")
+library("dplyr")
+library("ggplot2")
+
+#order genes in rld_table_alt as in the heatmap
+cluster_genes = rld_table_alt[clustering$tree_row[["order"]],]
+#add column with cluster numbers
+cluster_genes$cluster = sort(cutree(clustering$tree_row, k=6))
+
+#we need to reshape data to make it easy to read and compatible e.g. with ggplot2
+
+#we want to have a look at individual gene e.g. 'sh2d4bb'
+keycol <- "time_replicate"
+valuecol <- "rld"
+gathercols <- c(colnames(cluster_genes[4:12]))
+cluster_genes_gene = cluster_genes %>% tidyr::gather_(keycol, valuecol, gathercols)
+cluster_genes_gene = cluster_genes_gene %>% tidyr::separate("time_replicate", sep = '_', into = c('time', 'replicate'))
+
+ggplot(dplyr::filter(cluster_genes_gene, `Gene name` == "sh2d4bb")) + geom_violin(aes(time, rld, fill=time)) + geom_jitter(aes(time, rld), height = 0, width = 0.1) + theme_bw() + labs(title="Expression of sh2d4bb")
+
+#get means for biological replicates
+cluster_genes$`30hpf` = rowMeans(cluster_genes[,4:6])
+cluster_genes$`48hpf` = rowMeans(cluster_genes[,7:9])
+cluster_genes$`72hpf` = rowMeans(cluster_genes[,10:12])
+
+#create a data frame to plot individual genes in the clusters
+keycol <- "time_replicate"
+valuecol <- "rld"
+gathercols <- c(colnames(cluster_genes[14:16]))
+cluster_genes_long = cluster_genes %>% tidyr::gather_(keycol, valuecol, gathercols)
+
+#plot clusters
+pcp_cl <- ggplot(cluster_genes_long, aes(time_replicate, rld, group = `Gene stable ID`, colour = cluster)) 
+jit <- position_jitter (width = .08, height = .08)
+
+pcp_cl + geom_line(position = jit, colour = alpha("grey", 1/10)) + theme_bw() +
+  stat_summary(aes(group = cluster), fun.y = mean,   geom = "line",  colour = "red") +
+  facet_wrap(~ cluster) +
+  theme(axis.text.x = element_text(angle=-45, hjust=0)) + scale_y_continuous(limits=c(0, 20)) + labs(title="Gene expression pattern in clusters")
+
 ```
 
 ##Differential expression analysis
@@ -207,7 +251,7 @@ Res <- results(dds)
 Res
 
 #contrast for 30 vs 48 hpf
-Res_30_48 = results(dds, contrast = c('time', '48hpf', '30hpf'), independentFiltering=T)
+Res_30_48 = results(dds, contrast = c('time', '30hpf', '48hpf'), independentFiltering=T)
 #summary of 30 vs 48 hpf comparison
 summary(Res_30_48)
 #how many DEG with padj<0.05
@@ -215,7 +259,7 @@ sum(Res_30_48$padj < 0.05, na.rm=TRUE)
 plotMA(Res_30_48, ylim=c(-10,10), alpha = 0.05, main="DEG 30 vs 48 hpf")
 
 #same for 48 vs 72 hpf
-Res_48_72 = results(dds, contrast = c('time', '72hpf', '48hpf'), independentFiltering=T)
+Res_48_72 = results(dds, contrast = c('time', '48hpf', '72hpf'), independentFiltering=T)
 Res_48_72
 sum(Res_48_72$padj < 0.05, na.rm=TRUE)
 plotMA(Res_48_72, ylim=c(-10,10), alpha = 0.05, main="DEG 48 vs 72 hpf")
@@ -227,9 +271,6 @@ plotMA(Res_48_72, ylim=c(-10,10), alpha = 0.05, main="DEG 48 vs 72 hpf")
 Often creating a table with different conditions and DEG can be useful to perform further analysis and visualisations. We can also save a data frame as csv/tsv file or excel (xlsx) file. A number of packages can simply our work especially in terms of data table manipulation and filtering (`dplyr`, `tibble`) and exporting data (`xlsx`). We can also convert ENSEMBL gene IDs to any other annotations available in biomaRt database. For that purpose we will use `biomaRt` package.
 
 ```{r saving DEG }
-library("dplyr")
-library("tibble")
-library("biomaRt")
 library("xlsx")
 
 #create data frame with log2FC, pvalue and padj for DEG 30 vs 48 hpf
@@ -242,14 +283,10 @@ DEG = dplyr::inner_join(DEG_30_48, DEG_48_72, by="ENSEMBL" )
 names(DEG) = c("Gene stable ID", "log2FC_30vs48", "pval_30vs48", "padj_30vs48", "log2FC_48vs72", "pval_48vs72", "padj_48vs72")
 DEG_cutoff = dplyr::filter(DEG, padj_30vs48 <= 0.05 | padj_48vs72 <= 0.05)
 
-#select a dataset and save as mart object
-mart <- biomaRt::useDataset("drerio_gene_ensembl", useMart("ensembl"))
-#check what are available attributes stored in mart object
-#biomaRt::listAttributes(mart=mart)
-#getting external gene name and entrez gene name
-biomaRt_list <- getBM( filters = "ensembl_gene_id", attributes = c("ensembl_gene_id", "external_gene_name", "entrezgene"), values=DEG_cutoff$`Gene stable ID`, mart= mart, bmHeader = TRUE, uniqueRows = TRUE)
+
+biomaRt_list_deg <- getBM( filters = "ensembl_gene_id", attributes = c("ensembl_gene_id", "external_gene_name", "entrezgene"), values=DEG_cutoff$`Gene stable ID`, mart= mart, bmHeader = TRUE, uniqueRows = TRUE)
 #merging novel gene names with DEG table
-DEG_annot = dplyr::inner_join(biomaRt_list , DEG_cutoff, by="Gene stable ID" )
+DEG_annot = dplyr::inner_join(biomaRt_list_deg , DEG_cutoff, by="Gene stable ID" )
 #saving data as csv
 write.csv(DEG_annot, file = "DEG_cardio.csv")
 #saving data as xlsx
@@ -287,5 +324,7 @@ dotplot(enrichKEGG , showCategory = 5, by = "geneRatio", title="KEGG pathway enr
 
 
 
-
+```{r sesssion info, fig.width=12, fig.height=6,fig.show='hold',fig.align='center'}
+sessionInfo()
+```
 
