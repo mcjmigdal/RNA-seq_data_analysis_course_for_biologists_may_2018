@@ -1,2 +1,0 @@
-#!/bin/bash
-$VIRTUAL_ENV/.local/IGV_2.4.10/igv.sh
