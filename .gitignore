@@ -1,13 +1,6 @@
 *.fasta
-*.fasta.fai
+*.fasta.gz
 *.fa
-*.fa.fai
+*.fa.gz
 *.fastq
-*.sam
-*.bam
-*.gtf
-*.swp
-*.gz
-_*
-conf.py
-Makefile
+*.fastq.gz
