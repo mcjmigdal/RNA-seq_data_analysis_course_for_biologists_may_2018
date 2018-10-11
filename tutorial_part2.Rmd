@@ -11,7 +11,7 @@ output:
 ```{r setup, include=FALSE}
 library(knitr)
 knitr::opts_chunk$set(opts_chunk$set(tidy.opts=list(width.cutoff=60),message=FALSE, warning=FALSE, tidy=TRUE, strip.white=TRUE, echo = TRUE))
-#knitr::opts_knit$set(root.dir = "/home/biologist/workshop/part2")
+knitr::opts_knit$set(root.dir = "/home/biologist/workshop/part2")
 ```
 
 ## Goal of this tutorial
@@ -332,7 +332,7 @@ dotplot(enrichKEGG , showCategory = 5, by = "geneRatio", title="KEGG pathway enr
 #GO enrichment of genes in cluster 2
 
 cluster_2 = as.vector(dplyr::filter(cluster_genes_gene, `cluster` == "2")[,1])
-enrichGO_clust_2 = clusterProfiler::enrichGO(cluster_2, OrgDb = org.Dr.eg.db, ont="BP", keytype='ENSEMBL', pAdjustMethod = "BH", pvalueCutoff  = 0.01)
+enrichGO_clust_2 = clusterProfiler::enrichGO(cluster_2, OrgDb = org.Dr.eg.db, ont="BP",  keyType='ENSEMBL', pAdjustMethod = "BH", pvalueCutoff  = 0.01)
 
 barplot(enrichGO_clust_2, showCategory=8)
 dotplot(enrichGO_clust_2)
