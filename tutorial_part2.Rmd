@@ -11,6 +11,7 @@ output:
 ```{r setup, include=FALSE}
 library(knitr)
 knitr::opts_chunk$set(opts_chunk$set(tidy.opts=list(width.cutoff=60),message=FALSE, warning=FALSE, tidy=TRUE, strip.white=TRUE, echo = TRUE))
+#knitr::opts_knit$set(root.dir = "/home/biologist/workshop/part2")
 ```
 
 ## Goal of this tutorial
@@ -185,56 +186,6 @@ select <- order(rowMeans(rld_table_alt[,c(4:12)]),
 pheatmap(rld_table_alt[select,c(4:12)], cluster_rows=FALSE, cluster_cols=FALSE, labels_row=rld_table_alt[select,2])
 ```
 
-Another way to handle data is to perform a clustering i.e. k-mean or hierarchical. It allows to identify a group of genes that change in similar way in given conditions. 
-```{r clustering of rld,fig.width=4, fig.height=3,fig.show='hold',fig.align='center'}
-#hierarchical clustering of entire dataset with heatmap visualization
-clustering=pheatmap(rld_table_alt[,c(4:12)], cluster_rows=TRUE, cluster_cols=FALSE, show_rownames = FALSE, fontsize=8, cutree_rows=6)
-```
-
-We can plot genes from individual clusters to have a look at the pattern of expression for all of them or just single genes across conditions
-```{r cluster plot,fig.width=4, fig.height=3,fig.show='hold',fig.align='center'}
-library("reshape2")
-library("dplyr")
-library("ggplot2")
-
-#order genes in rld_table_alt as in the heatmap
-cluster_genes = rld_table_alt[clustering$tree_row[["order"]],]
-#add column with cluster numbers
-cluster_genes$cluster = sort(cutree(clustering$tree_row, k=6))
-
-#we need to reshape data to make it easy to read and compatible e.g. with ggplot2
-
-#we want to have a look at individual gene e.g. 'sh2d4bb'
-keycol <- "time_replicate"
-valuecol <- "rld"
-gathercols <- c(colnames(cluster_genes[4:12]))
-cluster_genes_gene = cluster_genes %>% tidyr::gather_(keycol, valuecol, gathercols)
-cluster_genes_gene = cluster_genes_gene %>% tidyr::separate("time_replicate", sep = '_', into = c('time', 'replicate'))
-
-ggplot(dplyr::filter(cluster_genes_gene, `Gene name` == "sh2d4bb")) + geom_violin(aes(time, rld, fill=time)) + geom_jitter(aes(time, rld), height = 0, width = 0.1) + theme_bw() + labs(title="Expression of sh2d4bb")
-
-#get means for biological replicates
-cluster_genes$`30hpf` = rowMeans(cluster_genes[,4:6])
-cluster_genes$`48hpf` = rowMeans(cluster_genes[,7:9])
-cluster_genes$`72hpf` = rowMeans(cluster_genes[,10:12])
-
-#create a data frame to plot individual genes in the clusters
-keycol <- "time_replicate"
-valuecol <- "rld"
-gathercols <- c(colnames(cluster_genes[14:16]))
-cluster_genes_long = cluster_genes %>% tidyr::gather_(keycol, valuecol, gathercols)
-
-#plot clusters
-pcp_cl <- ggplot(cluster_genes_long, aes(time_replicate, rld, group = `Gene stable ID`, colour = cluster)) 
-jit <- position_jitter (width = .08, height = .08)
-
-pcp_cl + geom_line(position = jit, colour = alpha("grey", 1/10)) + theme_bw() +
-  stat_summary(aes(group = cluster), fun.y = mean,   geom = "line",  colour = "red") +
-  facet_wrap(~ cluster) +
-  theme(axis.text.x = element_text(angle=-45, hjust=0)) + scale_y_continuous(limits=c(0, 20)) + labs(title="Gene expression pattern in clusters")
-
-```
-
 ##Differential expression analysis
 
 The standard differential expression analysis steps are wrapped into a single function, `DESeq`. Results tables are generated using the function `results`, which extracts a results table with **log2 fold changes**, **p values** and **adjusted p values**. With no additional arguments to results, the log2 fold change and Wald test p value will be for the last variable in the design formula, and if this is a factor, the comparison will be the last level of this variable over the reference level (see previous note on factor levels). However, the order of the variables of the design do not matter so long as the user specifies the comparison to build a results table for, using the name or contrast arguments of results.
@@ -272,6 +223,7 @@ Often creating a table with different conditions and DEG can be useful to perfor
 
 ```{r saving DEG }
 library("xlsx")
+library("dplyr")
 
 #create data frame with log2FC, pvalue and padj for DEG 30 vs 48 hpf
 DEG_30_48 = as.data.frame(Res_30_48) %>% tibble::rownames_to_column('ENSEMBL') %>% dplyr::select(ENSEMBL, log2FoldChange, pvalue, padj) 
@@ -292,6 +244,62 @@ write.csv(DEG_annot, file = "DEG_cardio.csv")
 #saving data as xlsx
 write.xlsx(DEG_annot, row.names = F, showNA = T, file = "DEG_cardio.xlsx")
 ```
+
+Another way to handle data is to perform a clustering i.e. k-mean or hierarchical. It allows to identify a group of genes that change in similar way in given conditions. 
+```{r clustering of rld DEG,fig.width=4, fig.height=3,fig.show='hold',fig.align='center'}
+#hierarchical clustering of DEG
+
+rld_DE = semi_join(rld_table_alt, DEG_annot, by="Gene stable ID")
+clustering=pheatmap(rld_DE[,c(4:12)], cluster_rows=TRUE, cluster_cols=FALSE, show_rownames = FALSE, fontsize=8, cutree_rows=9)
+```
+
+We can plot genes from individual clusters to have a look at the pattern of expression for all of them or just single genes across conditions
+```{r cluster plot,fig.width=4, fig.height=3,fig.show='hold',fig.align='center'}
+library("reshape2")
+library("ggplot2")
+
+#order genes in rld_table_alt as in the heatmap
+cluster_genes = rld_DE[clustering$tree_row[["order"]],]
+#add column with cluster numbers
+cluster_genes$cluster = sort(cutree(clustering$tree_row, k=9))
+
+#we need to reshape data to make it easy to read and compatible e.g. with ggplot2
+
+#we want to have a look at individual gene e.g. 'nkx2.1'
+keycol <- "time_replicate"
+valuecol <- "rld"
+gathercols <- c(colnames(cluster_genes[4:12]))
+cluster_genes_gene = cluster_genes %>% tidyr::gather_(keycol, valuecol, gathercols)
+cluster_genes_gene = cluster_genes_gene %>% tidyr::separate("time_replicate", sep = '_', into = c('time', 'replicate'))
+
+ggplot(dplyr::filter(cluster_genes_gene, `Gene name` == "nkx2.1")) + geom_violin(aes(time, rld, fill=time)) + geom_jitter(aes(time, rld), height = 0, width = 0.1) + theme_bw() + labs(title="Expression of nkx2.1")
+
+#or we visualize all genes from cluster 1
+ggplot(dplyr::filter(cluster_genes_gene, `cluster` == "1")) + geom_violin(aes(time, rld, fill=time)) + theme_bw() + labs(title="Genes of cluster 1")
+
+
+#get means for biological replicates
+cluster_genes$`30hpf` = rowMeans(cluster_genes[,4:6])
+cluster_genes$`48hpf` = rowMeans(cluster_genes[,7:9])
+cluster_genes$`72hpf` = rowMeans(cluster_genes[,10:12])
+
+#create a data frame to plot individual genes in the clusters
+keycol <- "time_replicate"
+valuecol <- "rld"
+gathercols <- c(colnames(cluster_genes[14:16]))
+cluster_genes_long = cluster_genes %>% tidyr::gather_(keycol, valuecol, gathercols)
+
+#plot clusters
+pcp_cl <- ggplot(cluster_genes_long, aes(time_replicate, rld, group = `Gene stable ID`, colour = cluster)) 
+jit <- position_jitter (width = .08, height = .08)
+
+pcp_cl + geom_line(position = jit, colour = alpha("grey", 1/10)) + theme_bw() +
+  stat_summary(aes(group = cluster), fun.y = mean,   geom = "line",  colour = "red") +
+  facet_wrap(~ cluster) +
+  theme(axis.text.x = element_text(angle=-45, hjust=0)) + scale_y_continuous(limits=c(0, 20)) + labs(title="Gene expression pattern in clusters")
+
+```
+
 
 **Functional Analyis: GO and KEGG analysis**
 
@@ -320,9 +328,16 @@ enrichKEGG <- compareCluster(geneCluster = FA_list, fun = "enrichKEGG", organism
 
 dotplot(enrichGO, showCategory = 5, by = "geneRatio", title="GO enrichment")
 dotplot(enrichKEGG , showCategory = 5, by = "geneRatio", title="KEGG pathway enrichment")
+
+#GO enrichment of genes in cluster 2
+
+cluster_2 = as.vector(dplyr::filter(cluster_genes_gene, `cluster` == "2")[,1])
+enrichGO_clust_2 = clusterProfiler::enrichGO(cluster_2, OrgDb = org.Dr.eg.db, ont="BP", keytype='ENSEMBL', pAdjustMethod = "BH", pvalueCutoff  = 0.01)
+
+barplot(enrichGO_clust_2, showCategory=8)
+dotplot(enrichGO_clust_2)
+
 ```
-
-
 
 ```{r sesssion info, fig.width=12, fig.height=6,fig.show='hold',fig.align='center'}
 sessionInfo()
