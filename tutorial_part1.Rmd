@@ -1,0 +1,329 @@
+---
+title: "RNA-seq data analysis course for biologists"
+author: "Migdal, MikeP, Jason"
+date: "May 2018 / Oct 2018"
+output: 
+  html_document: 
+    keep_md: false
+    number_sections: false
+    toc: false
+    theme: spacelab
+    df_print: paged
+    code_folding: hide
+---
+
+```{r setup, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval=FALSE)
+```
+
+# Welcome to RNA-seq data analysis course for biologists - part 1!
+
+## About:
+This is part of a introductory RNA-seq tutorial intended to provide an 
+overview of data handling and general analysis workflow. Tutorial covers such
+aspects as obtaining raw data, quality assessments, data preprocessing, 
+generating reads counts. Further downstream analyses including differential
+gene expression analyses are covered in second part of the tutorial that is
+conducted in R programming language.
+
+## Overview:
+During workshop we will be using multiple bioinformatics tools. Below
+is the short description of the tools we're going to use during our exercises:
+
++ fastq-dump - tool for querying NCBI SRA database.
++ fastqc - quality control tool for high throughput sequence data.
++ multiqc - aggregate results from bioinformatics analyses across many samples
+            into a single report.
++ cutadapt - finds and removes adapter sequences, primers, poly-A
+             tails and other types of unwanted sequence from your 
+             high-throughput sequencing reads.
++ salmon - tool for quantifying the expression of transcripts using RNA-seq data.
+
+During the workshop you will be reanalyzing data from recent 
+[paper](http://dev.biologists.org/content/144/19/3487.long) "Heart morphogenesis 
+gene regulatory networks revealed by temporal expression analysis" by *J. Hill et al.*
+In this study authors conducted an RNA-seq timecourse in zebrafish from 30 hpf to 72
+hpf (hours post fertilization). For the purpose of this workshop part we will use their
+data from one time point: 30 hpf.
+
+## Warm up
+To start things going first open a terminal. Once this is done please navigate to
+workshop directory and than to part1 directory:
+
+```{bash}
+cd workshop
+cd part1
+```
+For the warm up please try to look around the workshop directory. Start
+with listing it's content. Are there any subdirectories? If so check their content
+as well. Can you recognize any file formats?
+
+When you are done or you are sweating too much, you might proceed to next section or 
+check out exemplary warm up in a drop-down below.
+
+```{bash warm_up}
+$ ls
+raw  ref
+$ cd raw
+$ ls
+A30.fastq.gz  B30.fastq.gz  C30.fastq.gz
+$ cd ..
+$ cd ref
+$ ls
+Danio_rerio.GRCz11.cdna.chr5.fasta.gz
+$ cd ..
+```
+
+## Obtaining the sequencing data
+While we have already downloaded sequencing data for you (you can find it in 
+`raw/` directory), we would like to walk you through this process.
+The data required for our workshop can be easily obtained from NCBI Sequence Read
+Archive (SRA), which is a database storing raw sequencing data and alignment
+information from high-throughput sequencing platforms. More information about
+SRA can be found at NCBI [website](https://www.ncbi.nlm.nih.gov/sra).
+
+### Task 1.
+For this workshop we are interested in reanalyzing samples from *J. Hill et al.*
+[paper](http://dev.biologists.org/content/144/19/3487.long). Where researchers
+conducted an RNA-seq timecourse in zebrafish from 30 hpf to 72 hpf to study changes
+in gene expression during early heart development. For the sake of our
+time we will be only interested in data from one time points ie. 30 hpf. 
+Your first task is to locate the appropriate records in SRA. To do this first open 
+your browser and navigate to [SRA website](https://www.ncbi.nlm.nih.gov/sra/). Then 
+use information from the paper to locate the appropriate records. Note that we are
+only interested in particular SRA run accession numbers (SRR).
+
+#### Hint
+```{}
+Direct link to our data is given in paper footnotes
+```
+
+Having identified the SRRs of interest we can easily download them using `fastq-dump`
+from the SRA Toolkit. This is set of tools that allows interaction with SRA database.
+If you would like to download one of the records you could use a command like this (*read further before executing this command*):
+
+```{bash}
+fastq-dump --gzip SRR
+# Where SRR is your desired SRA run accession number
+# --gzip flag tells fastq-dump to compress files
+```
+However each of the *files we would intend to download is quite large (~6Gb)* so it
+would definitely take too long. Instead we will just use pre-downloaded files in
+`raw/` directory. 
+
+Note that due to time constrains of the workshop, files used in
+this part were downsampled to ~5% of original size. Good news is 
+that in the second part of the wrokshop you will use results from whole files!
+
+## Quality control
+Checking quality of your data is always the first thing you do when you
+get your sequencing results. For didactic reasons however we will first
+take a short peek at our sequencing data to get familiar with FASTQ file format
+structure. Navigate to `raw/` directory, list it's content and locate FASTQ files. 
+As you can see the FASTQ files are qzip compressed, to take a peak at content of 
+such files without decompressing them we can use following commands 
+`zcat file_name | head`.
+```{bash}
+$ cd raw/
+$ ls
+A30.fastq.gz     B30.fastq.gz     C30.fastq.gz
+$ zcat A30.fastq.gz | head
+@SRR6039677.1 DQNZZQ1:668:D2154ACXX:7:1101:1473:2159 length=50
+NTTTGTGTTTGAGGTCCCGCTTTCACGGTCCGTACTCATACTGAAAATCA
++SRR6039677.1 DQNZZQ1:668:D2154ACXX:7:1101:1473:2159 length=50
+#4=DDDDFHHHHHJGIIJJJGIJJIJJJGHHIFGHIJJJIGGIIIJJJJG
+```
+
+Now let's take a moment to think what kind of informations the file stores.
+FASTQ format is the standard by which all sequencing data is represented.
+Each entry consist of four elements:
+
+1. Header starting with `@` symbol and followed by read ID and other optional
+   information.
+2. Read sequence.
+3. Section starting with `+` optionaly followed by read ID and other information.
+4. Encoded quality values for the sequence in section 2 (you can try to decode quality scores using this [table](https://support.illumina.com/help/BaseSpace_OLH_009008/Content/Source/Informatics/BS/QualityScoreEncoding_swBS.htm)).
+
+Now when we have a good feeling that we know what we are doing we can proceed 
+to quality control. For this task we will use **FastQC** which is most popular quality
+control tool for sequencing data. To generate Fastqc reports for 30hpf samples
+use following command:
+
+```{bash}
+fastqc *.fastq.gz
+# *.fastq.gz  tells fastqc to process all files with .fastq.gz suffix
+```
+
+Now we could go through each of FastQC reports in raw directory, however as you know 
+there is one for each sample (3 altogether). Going through each of them separately
+would be a pain. Hopefully we can make use of another handy tool, MultiQC which can combine 
+multiple FastQC reports together into one. While being in `raw/` directory use following command 
+in your terminal:
+
+```{bash}
+multiqc .
+```
+When `MultiQC` finish its job open your browser and navigate to `part1/raw/` directory, the URL should be like `file:///home/biologist/workshop/part1/raw`.
+Open the `multiqc_report.html` file in your browser. You will see the aggregate quality report for 
+all samples.
+
+Now let's scroll through this report and try figuring out what's going on.
+
+More details about the report content can be found in FastQC [documentation](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/Help/).
+
+### Adapter trimming
+One of the problems we have identified in our data is adapter contamination in one of the samples.
+As we've seen in the report our reads contains adapter sequence at its 3' ends. This can
+happen when the lengths of fragments being sequenced are shorter than the read length. Presence
+of these adapter sequences could confuse read mapping process. This type of problem is usually dealt with by so called trimming. In this procedure we want to cut adapter sequences out of the reads.
+
+For adapter trimming we will use `cutadapt`, this is quite handy tool that is easy to work with
+and also provide other functionality like quality trimming. The basic command-line for cutadapt 
+that we will use is:
+
+```{bash}
+cutadapt -a AACCGGTT -o output.fastq.gz input.fastq.gz
+# -a AACCGGTT  adapter sequence
+# -o output.fastq  output file
+# input.fastq  input file
+```
+
+### Task 2.
+As you can see before we can proceed with adapter trimming we should know sequence of our adapter
+we want to get rid off. We can get the name of adapter in our samples from MultiQC report.
+Than we can find its sequence at 
+[Illumina website](https://support.illumina.com/bulletins/2016/12/what-sequences-do-i-use-for-adapter-trimming.html).
+Once you have all the information try trimming the reads from the problematic sample. If you want
+to see if it worked you can run FastQC on the cutadapt output and compare it with the original one.
+
+## Mapping reads to reference
+The most important task in this part of the tutorial is mapping the reads back to the reference 
+transcriptome in order to figure out from where our reads comes from. Here we will use Salmon,
+which is a tool for transcripts quantification from RNA-seq data. The program creates a 
+quasi-mappings of reads to transcript that are computed without performing a full base-to-base alignment. By doing so it answers question from which transcript given read originates, without 
+finding exact origin position of that read. It's much faster and less memory hungry than read 
+aligners (like STAR or tophat). The down site is that it provide us with less information. However 
+in RNA-seq its often the case that all we are interested in are transcript abundances.
+
+### Build reference index
+Before we can go into reads mapping we first have to build reference index. This is transcripts 
+representation that Salmon can efficiently use to quasi-map RNA-seq reads during quantification.
+
+#### Obtaining reference sequence
+In order build salmon reference index we will need a reference transcriptome. To this end we will 
+use ENSEMBL genome database. We will query this database for the information we seek using BioMart. 
+According to its documentation *'BioMart is an easy-to-use web-based tool that allows extraction 
+of data without any programming knowledge or understanding of the underlying database structure.'*
+Once you got your excitement under control navigate to [BioMart website](https://www.ensembl.org/biomart/martview). 
+
+First we have to choose database we wish to query, for us its **Ensembl Genes 92**.  
+Then we select species we are interested in, namely ...
+Once we do it new options will appear in the left control panel. 
+
+1. Open Attributes tab and select Sequences (we want query for sequences)
+2. Using foldable filters below select cDNA as type of sequences and transcript ID as the only
+   header information
+3. Now open Filters on left panel and choose to query only for 1 chromosome
+4. Click on Results button. After a while you will see fragment of your result
+
+The result we got is FASTA formatted, each entry consist of two elements:
+
++ header starting with ">" followed by ID and optional informations
++ sequence, here it's sequence of a transcript
+
+We could now download the cDNA sequences we found in a database, but to save time we already did it
+for you. Go back to your terminal and navigate to `part1/ref/` directory there you will find a 
+FASTA file containing Zebrafish transcripts. *(note that due to time constrains we are only working with one chromosome 5)*
+
+Now we are in fact ready to use salmon and map reads to our cDNA sequences. However eventually
+we will be interested in knowing to which gene given transcript corresponds to. Right now we 
+are missing this information. To fix it try solving **Task 3**.
+
+##### Task 3.
+Your boss comes to your office and ask you to get some very important informations that were 
+requested by the editors of your last paper. Your job is to prepare a file containing a mapping of 
+transcripts to genes. Each line of the file should contain transcript ID and corresponding gene ID 
+separated with a tab. During the lunch you discussed the problem with one handsome bioinformatician
+who claims that you can easily generate such file using BioMart.  
+**Please do download the file to `ref` directory. We are really gonna need it!**
+
+#### Create a salmon index
+When you have your reference FASTA you can start creating salmon index. This operation have to be 
+done only once. Then created index can be reused each time you want to map your reads. To cut the 
+story short index can be build using command like this:
+
+```{bash}
+salmon index -t ref/Danio_rerio.GRCz11.cdna.chr5.fasta.gz -i ref/Danio_rerio
+# -t FASTA  FASTA file you want to index
+# -i OUT  name of output
+```
+Once program finishes you can find a new directory in `ref/`. If you are curious you may have a 
+look at it's content. However the most important files from the salmon perspective are binary and 
+cannot be interpreted by human in any sensible way.
+
+### Quantify transcripts
+Having the reference index build we can finally map our reads and quantify them. The salmon will 
+try to figure out from which transcript each reads comes from. Then it will estimate the read 
+counts for each of them. If we additionally provide transcript - gene mapping (*Task 2*) salmon 
+will additionally output aggregated gene-level abundance estimates. Here we will run salmon with 
+its default options, however it have many additional parameters that can be used to tweak its 
+performance (type `salmon quant --help-reads` to see them). Following command will perform mapping 
+for one of the samples:
+
+```{bash}
+mkdir quants
+salmon quant -i ref/Danio_rerio -l A -r raw/A30.fastq.gz -p 2 -g transcripts_gene_mappings_file -o quants/A30
+# -i ref/Danio_rerio  reference index directory
+# -l A  library type, A tells salmon to automaticaly findout this information
+# -r raw/A30.fastq.gz  FASTQ file with sequencing reads
+# -p 2  number of processors to use
+# -g transcripts_gene_mappings_file   File containing a mapping of transcripts to genes (tab-delimited).
+# -o quants/A30_quant  output location
+```
+
+When the program finish you will find a new directory `quants/A30_quant` that contains salmon
+output. It contains number of files including logs and json's describing used parameters. The 
+most important results are files with `.sf` suffix. These files contains estimated read counts
+for each transcript that we will use for further analysis. We can take a quick look at one of these
+files to see how it look likes.
+
+```{bash}
+$ head quants/A30_quant/quant.sf
+Name    Length  EffectiveLength TPM     NumReads
+ENSDART00000000005      2604    2355.000        0.033599        7.000000
+ENSDART00000000221      1582    1333.000        0.479949        56.597900
+ENSDART00000000004      2476    2227.000        0.071061        14.000000
+ENSDART00000000198      3295    3046.000        0.319834        86.184502
+ENSDART00000000070      1859    1610.000        0.196934        28.049266
+ENSDART00000000250      3780    3531.000        0.272111        85.000000
+ENSDART00000000069      2033    1784.000        0.120388        19.000000
+ENSDART00000000160      2292    2043.000        0.125370        22.658804
+ENSDART00000000192      6443    6194.000        0.020039        10.980325
+```
+
+As you can see this is simple tab delimited file format. It has four columns, that store 
+information about transcript name, its length, effective length, abundance measured as TPM 
+(transcript per million reads) and reads counts estimation. Here the two last columns are most 
+interesting for us. The TPM values can be used for simple comparisons of expression levels between 
+different samples and within the sample. Read counts on the other hand can be used as an input for statistical software to perform differential expression.
+
+Now to put some life in this result let's try to check which isoform of *Tbx5a* is more abundant 
+in sample A30. The ENSEMBID's for the two *Tbx5a* isoforms are: ENSDART00000114947, 
+ENSDART00000037691. We can use `grep` to get the lines of our output containing these genes.
+
+```{bash}
+cd ~/workshop/part2/quants/A30_quant
+grep ENSDART00000114947 quant.sf
+grep ENSDART00000037691 quant.sf
+```
+
+Finally it's possible to create simple report of mapping results, which might be usefull when you are analyzing many samples. Go to `quants/` directory and use MultiQC.
+
+```{bash}
+cd quants
+multiqc .
+```
+
+THE END
+
+**TIME FOR COFFEE!**
